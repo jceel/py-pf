@@ -31,6 +31,7 @@ from posix.types cimport *
 ctypedef int sa_family_t
 ctypedef uint32_t in_addr
 
+
 cdef extern from "sys/param.h":
     enum:
         MAXPATHLEN
@@ -136,7 +137,12 @@ cdef extern from "net/pfvar.h":
         uint8_t type
         uint8_t iflags
 
+    cdef struct pf_pooladdr_tailq:
+        pf_pooladdr* tqe_next
+        pf_pooladdr** tqe_prev
+
     cdef struct pf_pooladdr:
+        pf_pooladdr_tailq entries
         pf_addr_wrap addr
         char ifname[IFNAMSIZ]
 
@@ -149,6 +155,18 @@ cdef extern from "net/pfvar.h":
     cdef struct pf_rule_divert:
         pf_addr addr
         uint16_t port
+
+    cdef struct pf_palist:
+        pf_pooladdr* tqh_first
+        pf_pooladdr** tqh_last
+
+    cdef struct pf_pool:
+        pf_palist list
+        pf_pooladdr* cur
+        pf_addr counter
+        int tblidx
+        uint16_t proxy_port[2]
+        uint8_t opts
 
     cdef struct pf_rule:
         pf_rule_addr src
@@ -181,6 +199,7 @@ cdef extern from "net/pfvar.h":
         uint8_t	anchor_relative
         uint8_t	anchor_wildcard
         pf_rule_divert divert
+        pf_pool rpool
 
     cdef struct pfioc_pooladdr:
         uint32_t action

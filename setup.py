@@ -31,7 +31,7 @@ from Cython.Distutils import build_ext
 
 
 extensions = [
-    Extension("pf", ["pf.pyx"], extra_compile_args=["-g"])
+    Extension("pf", ["pf.pyx"], extra_compile_args=["-g", "-O0"])
 ]
 
 

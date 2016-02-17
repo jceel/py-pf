@@ -32,7 +32,7 @@ import cython
 cimport defs
 from libc.errno cimport *
 from libc.stdint cimport *
-from libc.string cimport strerror, memcpy
+from libc.string cimport strerror, memcpy, memset
 
 
 class RulesetType(enum.IntEnum):
@@ -59,6 +59,19 @@ class RuleAction(enum.IntEnum):
     DEFER = defs.PF_DEFER
 
 
+class RuleOperator(enum.IntEnum):
+    NONE = defs.PF_OP_NONE
+    IRG = defs.PF_OP_IRG
+    EQ = defs.PF_OP_EQ
+    NE = defs.PF_OP_NE
+    LT = defs.PF_OP_LT
+    LE = defs.PF_OP_LE
+    GT = defs.PF_OP_GT
+    GE = defs.PF_OP_GE
+    XRG = defs.PF_OP_XRG
+    RRG = defs.PF_OP_RRG
+
+
 class RuleAddressType(enum.IntEnum):
     ADDRMASK = defs.PF_ADDR_ADDRMASK
     NOROUTE = defs.PF_ADDR_NOROUTE
@@ -75,11 +88,74 @@ class RuleDirection(enum.IntEnum):
     FWD = defs.PF_FWD
 
 
+cdef class Address(object):
+    cdef defs.pf_addr_wrap wrap
+
+    def __str__(self):
+        return "<pf.Address address '{0}' netmask '{1}'>".format(
+            self.address,
+            self.netmask
+        )
+
+    def __repr__(self):
+        return str(self)
+
+    property address:
+        def __get__(self):
+            return ipaddress.ip_address(self.wrap.v.a.addr.v4.s_addr)
+
+    property netmask:
+        def __get__(self):
+            return ipaddress.ip_address(self.wrap.v.a.mask.v4.s_addr)
+
+
+cdef class AddressPool(object):
+    cdef PF pf
+    cdef defs.pf_pool *pool
+    cdef uint32_t ticket
+    cdef int action
+    cdef int nr
+
+    property items:
+        def __get__(self):
+            cdef Address addr
+            cdef defs.pfioc_pooladdr pp
+
+            memset(&pp, 0, cython.sizeof(defs.pfioc_pooladdr))
+            pp.r_action = self.action
+            pp.r_num = self.nr
+            pp.ticket = self.ticket
+
+            print("r_action={0} nr={3} r_num={1} ticket={2}".format(pp.r_action, pp.r_num, pp.ticket, self.nr))
+
+            if self.pf.ioctl(defs.DIOCGETADDRS, &pp) != 0:
+                raise OSError(errno, strerror(errno))
+
+            for i in range(0, pp.nr):
+                memset(&pp, 0, cython.sizeof(defs.pfioc_pooladdr))
+                pp.r_action = self.action
+                pp.r_num = self.nr
+                pp.ticket = self.ticket
+
+                if self.pf.ioctl(defs.DIOCGETADDR, &pp) != 0:
+                    raise OSError(errno, strerror(errno))
+
+                addr = Address.__new__(Address)
+                memcpy(&addr.wrap, &pp.addr.addr, cython.sizeof(defs.pf_addr_wrap))
+                yield addr
+
+    def append(self, address):
+        pass
+
+    def remove(self, index):
+        pass
+
+
 cdef class RuleAddress(object):
     cdef defs.pf_rule_addr* addr
 
     def __str__(self):
-        return "<pf.RuleAddress address '{0}' netmask '{1}' ifname '{2}' table '{3}'".format(
+        return "<pf.RuleAddress address '{0}' netmask '{1}' ifname '{2}' table '{3}'>".format(
             self.address,
             self.netmask,
             self.ifname,
@@ -109,9 +185,27 @@ cdef class RuleAddress(object):
         def __get__(self):
             return self.addr.addr.v.tblname
 
+    property port_range:
+        def __get__(self):
+            return self.addr.port
+
+        def __set__(self, values):
+            self.addr.port = values
+
+    property port_op:
+        def __get__(self):
+            return RuleOperator(self.addr.port_op)
+
+        def __set__(self, op):
+            self.addr.port_op = op
+
 
 cdef class Rule(object):
+    cdef PF pf
     cdef defs.pf_rule rule
+    cdef uint32_t ticket
+    cdef int action
+    cdef int nr
 
     property src:
         def __get__(self):
@@ -157,6 +251,18 @@ cdef class Rule(object):
         def __get__(self):
             return self.rule.ifname
 
+    property redirect_pool:
+        def __get__(self):
+            cdef AddressPool pool
+
+            pool = AddressPool.__new__(AddressPool)
+            pool.pf = self.pf
+            pool.pool = &self.rule.rpool
+            pool.ticket = self.ticket
+            pool.nr = self.nr
+            pool.action = self.rule.action
+            return pool
+
 
 cdef class PF(object):
     cdef int ioctl(self, uint32_t cmd, void* args):
@@ -193,7 +299,10 @@ cdef class PF(object):
                 raise OSError(errno, strerror(errno))
 
             r = Rule.__new__(Rule)
-            memcpy(&r.rule, &rule.rule, cython.sizeof(rule))
+            r.pf = self
+            r.ticket = rule.ticket
+            r.nr = rule.nr
+            memcpy(&r.rule, &rule.rule, cython.sizeof(rule.rule))
             yield r
 
     def add_rule(self):
