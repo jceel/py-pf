@@ -189,11 +189,10 @@ cdef class RuleAddress(object):
     cdef defs.pf_rule_addr* addr
 
     def __str__(self):
-        return "<pf.RuleAddress address '{0}' netmask '{1}' ifname '{2}' table '{3}'>".format(
+        return "<pf.RuleAddress address '{0}' port_range '{1}' port_op '{2}'>".format(
             self.address,
-            self.netmask,
-            self.ifname,
-            self.table_name
+            self.port_range,
+            self.port_op
         )
 
     def __repr__(self):
@@ -216,10 +215,10 @@ cdef class RuleAddress(object):
 
     property port_range:
         def __get__(self):
-            return self.addr.port
+            return [socket.ntohs(i) for i in self.addr.port]
 
         def __set__(self, values):
-            self.addr.port = values
+            self.addr.port = [socket.htons(i) for i in values]
 
     property port_op:
         def __get__(self):
@@ -351,5 +350,5 @@ cdef class PF(object):
             memcpy(&r.rule, &rule.rule, cython.sizeof(rule.rule))
             yield r
 
-    def add_rule(self):
+    def append_rule(self):
         pass
