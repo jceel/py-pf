@@ -310,6 +310,14 @@ cdef class Rule(object):
 
 
 cdef class PF(object):
+    TABLES = {
+        'scrub': defs.PF_SCRUB,
+        'filter': defs.PF_PASS,
+        'nat': defs.PF_NAT,
+        'binat': defs.PF_BINAT,
+        'rdr': defs.PF_RDR
+    }
+
     cdef int ioctl(self, uint32_t cmd, void* args):
         cdef int result
 
@@ -318,22 +326,17 @@ cdef class PF(object):
         os.close(fd)
         return result
 
+    def __getstate__(self):
+        return {k: [r.__getstate__() for r in self.get_rules(k)] for k in self.TABLES}
+
     def get_rules(self, table):
         cdef Rule r
         cdef defs.pfioc_rule rule
 
-        tables = {
-            'scrub': defs.PF_SCRUB,
-            'filter': defs.PF_PASS,
-            'nat': defs.PF_NAT,
-            'binat': defs.PF_BINAT,
-            'rdr': defs.PF_RDR
-        }
-
-        if table not in tables:
+        if table not in self.TABLES:
             raise KeyError('Invalid table name')
 
-        rule.rule.action = tables[table]
+        rule.rule.action = self.TABLES[table]
 
         if self.ioctl(defs.DIOCGETRULES, &rule) != 0:
             raise OSError(errno, strerror(errno))
