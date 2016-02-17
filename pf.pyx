@@ -28,6 +28,7 @@
 import os
 import enum
 import ipaddress
+import socket
 import cython
 cimport defs
 from libc.errno cimport *
@@ -102,11 +103,11 @@ cdef class Address(object):
 
     property address:
         def __get__(self):
-            return ipaddress.ip_address(self.wrap.v.a.addr.v4.s_addr)
+            return ipaddress.ip_address(socket.htonl(self.wrap.v.a.addr.v4.s_addr))
 
     property netmask:
         def __get__(self):
-            return ipaddress.ip_address(self.wrap.v.a.mask.v4.s_addr)
+            return ipaddress.ip_address(socket.htonl(self.wrap.v.a.mask.v4.s_addr))
 
 
 cdef class AddressPool(object):
@@ -125,8 +126,6 @@ cdef class AddressPool(object):
             pp.r_action = self.action
             pp.r_num = self.nr
             pp.ticket = self.ticket
-
-            print("r_action={0} nr={3} r_num={1} ticket={2}".format(pp.r_action, pp.r_num, pp.ticket, self.nr))
 
             if self.pf.ioctl(defs.DIOCGETADDRS, &pp) != 0:
                 raise OSError(errno, strerror(errno))
