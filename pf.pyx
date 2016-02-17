@@ -101,6 +101,30 @@ cdef class Address(object):
     def __repr__(self):
         return str(self)
 
+    def __getstate__(self):
+        if self.type == RuleAddressType.ADDRMASK:
+            return {
+                'type': self.type.name,
+                'address': str(self.address),
+                'netmask': str(self.netmask),
+            }
+
+        if self.type == RuleAddressType.DYNIFTL:
+            return {
+                'type': self.type.name,
+                'ifname': self.ifname
+            }
+
+        if self.type == RuleAddressType.TABLE:
+            return {
+                'type': self.type.name,
+                'table': self.table_name
+            }
+
+    property type:
+        def __get__(self):
+            return RuleAddressType(self.wrap.type)
+
     property address:
         def __get__(self):
             return ipaddress.ip_address(socket.htonl(self.wrap.v.a.addr.v4.s_addr))
@@ -109,6 +133,14 @@ cdef class Address(object):
         def __get__(self):
             return ipaddress.ip_address(socket.htonl(self.wrap.v.a.mask.v4.s_addr))
 
+    property table_name:
+        def __get__(self):
+            return self.wrap.v.tblname
+
+    property ifname:
+        def __get__(self):
+            return self.wrap.v.ifname
+
 
 cdef class AddressPool(object):
     cdef PF pf
@@ -116,6 +148,9 @@ cdef class AddressPool(object):
     cdef uint32_t ticket
     cdef int action
     cdef int nr
+
+    def __getstate__(self):
+        return [i.__getstate__() for i in self.items]
 
     property items:
         def __get__(self):
@@ -164,25 +199,20 @@ cdef class RuleAddress(object):
     def __repr__(self):
         return str(self)
 
-    property type:
-        def __get__(self):
-            return RuleAddressType(self.addr.addr.type)
+    def __getstate__(self):
+        return {
+            'address': self.address.__getstate__(),
+            'port_range': self.port_range,
+            'port_op': self.port_op.name
+        }
 
     property address:
         def __get__(self):
-            return ipaddress.ip_address(self.addr.addr.v.a.addr.v4.s_addr)
+            cdef Address addr
 
-    property netmask:
-        def __get__(self):
-            return ipaddress.ip_address(self.addr.addr.v.a.mask.v4.s_addr)
-
-    property ifname:
-        def __get__(self):
-            return self.addr.addr.v.ifname
-
-    property table_name:
-        def __get__(self):
-            return self.addr.addr.v.tblname
+            addr = Address.__new__(Address)
+            memcpy(&addr.wrap, &self.addr.addr, cython.sizeof(defs.pf_addr_wrap))
+            return addr
 
     property port_range:
         def __get__(self):
@@ -203,8 +233,18 @@ cdef class Rule(object):
     cdef PF pf
     cdef defs.pf_rule rule
     cdef uint32_t ticket
-    cdef int action
     cdef int nr
+
+    def __getstate__(self):
+        return {
+            'src': self.src.__getstate__(),
+            'dst': self.dst.__getstate__(),
+            'action': self.action.name,
+            'type': self.type,
+            'ifname': self.ifname,
+            'redirect_pool': self.redirect_pool.__getstate__(),
+            'proxy_ports': self.proxy_ports
+        }
 
     property src:
         def __get__(self):
@@ -261,6 +301,13 @@ cdef class Rule(object):
             pool.nr = self.nr
             pool.action = self.rule.action
             return pool
+
+    property proxy_ports:
+        def __get__(self):
+            return self.rule.rpool.proxy_port
+
+        def __set__(self, value):
+            self.rule.rpool.proxy_port = value
 
 
 cdef class PF(object):
