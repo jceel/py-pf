@@ -236,6 +236,7 @@ cdef class Rule(object):
 
     def __getstate__(self):
         return {
+            'index': self.nr,
             'src': self.src.__getstate__(),
             'dst': self.dst.__getstate__(),
             'action': self.action.name,
@@ -352,6 +353,23 @@ cdef class PF(object):
             r.nr = rule.nr
             memcpy(&r.rule, &rule.rule, cython.sizeof(rule.rule))
             yield r
+
+    def delete_rule(self, table, index):
+        cdef defs.pfioc_rule pcr
+
+        if table not in self.TABLES:
+            raise KeyError('Invalid table name')
+
+        memset(&pcr, 0, cython.sizeof(defs.pfioc_rule))
+        pcr.rule.action = self.TABLES[table]
+        pcr.action = defs.PF_CHANGE_GET_TICKET
+        if self.ioctl(defs.DIOCCHANGERULE, &pcr) != 0:
+            raise OSError(errno, strerror(errno))
+
+        pcr.nr = index
+        pcr.action = defs.PF_CHANGE_REMOVE
+        if self.ioctl(defs.DIOCCHANGERULE, &pcr) != 0:
+            raise OSError(errno, strerror(errno))
 
     def append_rule(self):
         pass
