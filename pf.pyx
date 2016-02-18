@@ -210,14 +210,14 @@ cdef class AddressPool(object):
     def __setitem__(self, key, value):
         self.items[key] = value
 
+    def __delitem__(self, key):
+        del self.items[key]
+
     def __iter__(self):
         return self.items.__iter__()
 
     def append(self, address):
         self.items.append(address)
-
-    def remove(self, index):
-        pass
 
 
 cdef class RuleAddress(object):
@@ -420,10 +420,12 @@ cdef class PF(object):
             yield r
 
     def enable(self):
-        pass
+        if self.ioctl(defs.DIOCSTART, NULL) != 0:
+            raise OSError(errno, strerror(errno))
 
     def disable(self):
-        pass
+        if self.ioctl(defs.DIOCSTOP, NULL) != 0:
+            raise OSError(errno, strerror(errno))
 
     def delete_rule(self, table, index):
         cdef defs.pfioc_rule pcr
