@@ -94,6 +94,10 @@ cdef class Address(object):
     cdef defs.pf_addr_wrap* wrap
     cdef bint free
 
+    def __init__(self):
+        self.wrap = <defs.pf_addr_wrap*>malloc(cython.sizeof(defs.pf_addr_wrap))
+        self.free = True
+
     def __dealloc__(self):
         if self.free:
             free(self.wrap)
@@ -207,7 +211,7 @@ cdef class AddressPool(object):
         return self.items.__iter__()
 
     def append(self, address):
-        pass
+        self.items.append(address)
 
     def remove(self, index):
         pass
@@ -262,9 +266,16 @@ cdef class Rule(object):
     cdef defs.pf_rule rule
     cdef uint32_t ticket
     cdef int nr
+    cdef AddressPool rpool
 
     def __init__(self):
         self.nr = -1
+        self.rpool = AddressPool.__new__(AddressPool)
+        self.rpool.__init__()
+        self.rpool.pf = self.pf
+        self.rpool.pool = &self.rule.rpool
+        memset(&self.rule, 0, sizeof(defs.pf_rule))
+        self.rule.rtableid = -1
 
     def __getstate__(self):
         return {
@@ -347,16 +358,10 @@ cdef class Rule(object):
 
     property redirect_pool:
         def __get__(self):
-            cdef AddressPool pool
-
-            pool = AddressPool.__new__(AddressPool)
-            pool.__init__()
-            pool.pf = self.pf
-            pool.pool = &self.rule.rpool
             if self.ticket:
-                pool.load(self.ticket, self.rule.action, self.nr)
+                self.rpool.load(self.ticket, self.rule.action, self.nr)
 
-            return pool
+            return self.rpool
 
     property proxy_ports:
         def __get__(self):
@@ -404,6 +409,7 @@ cdef class PF(object):
                 raise OSError(errno, strerror(errno))
 
             r = Rule.__new__(Rule)
+            r.__init__()
             r.pf = self
             r.ticket = rule.ticket
             r.nr = rule.nr
@@ -428,6 +434,7 @@ cdef class PF(object):
             raise OSError(errno, strerror(errno))
 
     def append_rule(self, table, Rule rule):
+        cdef Address addr
         cdef defs.pfioc_rule pcr
         cdef defs.pfioc_pooladdr pp
 
@@ -437,6 +444,12 @@ cdef class PF(object):
         memset(&pp, 0, cython.sizeof(defs.pfioc_pooladdr))
         if self.ioctl(defs.DIOCBEGINADDRS, &pp) != 0:
             raise OSError(errno, strerror(errno))
+
+        for a in rule.redirect_pool:
+            addr = <Address>a
+            memcpy(&pp.addr, addr.wrap, cython.sizeof(defs.pf_addr_wrap))
+            if self.ioctl(defs.DIOCADDADDR, &pp) != 0:
+                raise OSError(errno, strerror(errno))
 
         memset(&pcr, 0, cython.sizeof(defs.pfioc_rule))
         pcr.rule.action = self.TABLES[table]

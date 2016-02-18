@@ -198,6 +198,7 @@ cdef extern from "net/pfvar.h":
         uint8_t	set_tos
         uint8_t	anchor_relative
         uint8_t	anchor_wildcard
+        int rtableid
         pf_rule_divert divert
         pf_pool rpool
 
