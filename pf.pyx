@@ -178,6 +178,9 @@ cdef class AddressPool(object):
         cdef Address addr
         cdef defs.pfioc_pooladdr pp
 
+        assert self.pf
+        assert self.pool
+
         memset(&pp, 0, cython.sizeof(defs.pfioc_pooladdr))
         pp.r_action = action
         pp.r_num = nr
@@ -415,6 +418,12 @@ cdef class PF(object):
             r.nr = rule.nr
             memcpy(&r.rule, &rule.rule, cython.sizeof(rule.rule))
             yield r
+
+    def enable(self):
+        pass
+
+    def disable(self):
+        pass
 
     def delete_rule(self, table, index):
         cdef defs.pfioc_rule pcr
