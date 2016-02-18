@@ -314,6 +314,10 @@ cdef class Rule(object):
             'proxy_ports': self.proxy_ports
         }
 
+    property index:
+        def __get__(self):
+            return self.nr
+
     property src:
         def __get__(self):
             cdef RuleAddress addr
