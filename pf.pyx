@@ -94,9 +94,20 @@ cdef class Address(object):
     cdef defs.pf_addr_wrap* wrap
     cdef bint free
 
-    def __init__(self):
+    def __init__(self, address=None, netmask=None, table_name=None, ifname=None):
         self.wrap = <defs.pf_addr_wrap*>malloc(cython.sizeof(defs.pf_addr_wrap))
         self.free = True
+
+        if address:
+            self.address = address
+            self.netmask = netmask
+            return
+
+        if table_name:
+            self.table_name = table_name
+
+        if ifname:
+            self.ifname = ifname
 
     def __dealloc__(self):
         if self.free:
@@ -135,11 +146,15 @@ cdef class Address(object):
         def __get__(self):
             return RuleAddressType(self.wrap.type)
 
+        def __set__(self, value):
+            self.wrap.type = int(value)
+
     property address:
         def __get__(self):
             return ipaddress.ip_address(socket.htonl(self.wrap.v.a.addr.v4.s_addr))
 
         def __set__(self, value):
+            self.wrap.type = RuleAddressType.ADDRMASK
             self.wrap.v.a.addr.v4.s_addr = socket.ntohl(int(value))
 
     property netmask:
@@ -147,6 +162,7 @@ cdef class Address(object):
             return ipaddress.ip_address(socket.htonl(self.wrap.v.a.mask.v4.s_addr))
 
         def __set__(self, value):
+            self.wrap.type = RuleAddressType.ADDRMASK
             self.wrap.v.a.mask.v4.s_addr = socket.ntohl(int(value))
 
     property table_name:
@@ -154,6 +170,7 @@ cdef class Address(object):
             return self.wrap.v.tblname
 
         def __set__(self, value):
+            self.wrap.type = RuleAddressType.TABLE
             strncpy(self.wrap.v.tblname, value, cython.sizeof(self.wrap.v.tblname))
 
     property ifname:
@@ -161,6 +178,7 @@ cdef class Address(object):
             return self.wrap.v.ifname
 
         def __set__(self, value):
+            self.wrap.type = RuleAddressType.DYNIFTL
             strncpy(self.wrap.v.ifname, value, cython.sizeof(self.wrap.v.ifname))
 
 cdef class AddressPool(object):
