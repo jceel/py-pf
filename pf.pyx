@@ -1,5 +1,6 @@
+# cython: c_string_type=unicode, c_string_encoding=ascii
 #
-# Copyright 2015 iXsystems, Inc.
+# Copyright 2016 iXsystems, Inc.
 # All rights reserved
 #
 # Redistribution and use in source and binary forms, with or without
