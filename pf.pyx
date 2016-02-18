@@ -100,6 +100,7 @@ cdef class Address(object):
         self.free = True
 
         memset(self.wrap, 0, cython.sizeof(defs.pf_addr_wrap))
+        self.wrap.v.a.mask.v4.s_addr = 0xffffffff
 
         if address:
             self.address = address
