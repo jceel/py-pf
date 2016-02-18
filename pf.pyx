@@ -99,6 +99,8 @@ cdef class Address(object):
         self.wrap = <defs.pf_addr_wrap*>malloc(cython.sizeof(defs.pf_addr_wrap))
         self.free = True
 
+        memset(self.wrap, 0, cython.sizeof(defs.pf_addr_wrap))
+
         if address:
             self.address = address
             self.netmask = netmask
