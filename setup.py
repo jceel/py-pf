@@ -24,6 +24,8 @@
 # SUCH DAMAGE.
 #
 
+import Cython.Compiler.Options
+Cython.Compiler.Options.annotate = True
 import subprocess
 from distutils.core import setup
 from Cython.Distutils.extension import Extension
@@ -38,6 +40,9 @@ extensions = [
 setup(
     name='pf',
     version='1.0',
+    packages=[''],
+    package_dir={'': ''},
+    package_data={'': ['*.html', '*.c']},
     cmdclass={'build_ext': build_ext},
     ext_modules=extensions
 )
