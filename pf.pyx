@@ -399,6 +399,13 @@ cdef class Rule(object):
         def __set__(self, value):
             self.rule.rpool.proxy_port = value
 
+    property natpass:
+        def __get__(self):
+            return bool(self.rule.natpass)
+
+        def __set__(self, value):
+            self.rule.natpass = int(value)
+
 
 cdef class PF(object):
     TABLES = {
