@@ -438,8 +438,8 @@ cdef class PF(object):
                 raise OSError(errno, strerror(errno))
 
             r = Rule.__new__(Rule)
-            r.__init__()
             r.pf = self
+            r.__init__()
             r.ticket = rule.ticket
             r.nr = rule.nr
             memcpy(&r.rule, &rule.rule, cython.sizeof(rule.rule))
