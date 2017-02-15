@@ -379,6 +379,9 @@ cdef class Rule(object):
         def __get__(self):
             return self.rule.label
 
+        def __set__(self, value):
+            strncpy(self.rule.label, value, sizeof(self.rule.label))
+
     property ifname:
         def __get__(self):
             return self.rule.ifname
