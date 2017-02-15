@@ -309,6 +309,7 @@ cdef class Rule(object):
             'dst': self.dst.__getstate__(),
             'action': self.action.name,
             'type': self.type,
+            'label': self.label,
             'ifname': self.ifname,
             'redirect_pool': self.redirect_pool.__getstate__(),
             'proxy_ports': self.proxy_ports
