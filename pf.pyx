@@ -192,6 +192,7 @@ cdef class Address(object):
 
         def __set__(self, value):
             self.wrap.type = RuleAddressType.TABLE
+            self.wrap.v.a.mask.v4.s_addr = 0xffffffff
             strncpy(self.wrap.v.tblname, value, cython.sizeof(self.wrap.v.tblname))
 
     property ifname:
@@ -200,6 +201,7 @@ cdef class Address(object):
 
         def __set__(self, value):
             self.wrap.type = RuleAddressType.DYNIFTL
+            self.wrap.v.a.mask.v4.s_addr = 0xffffffff
             strncpy(self.wrap.v.ifname, value, cython.sizeof(self.wrap.v.ifname))
 
 cdef class AddressPool(object):
