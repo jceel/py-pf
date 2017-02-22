@@ -119,6 +119,13 @@ cdef extern from "net/pfvar.h":
         PF_TABLE_NAME_SIZE
         PF_TAG_NAME_SIZE
 
+    enum:
+        PFI_AFLAG_NETWORK
+        PFI_AFLAG_BROADCAST
+        PFI_AFLAG_PEER
+        PFI_AFLAG_MODEMASK
+        PFI_AFLAG_NOALIAS
+
     cdef struct pf_addr:
         in_addr_t v4
         in6_addr v6

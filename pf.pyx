@@ -84,6 +84,14 @@ class RuleAddressType(enum.IntEnum):
     RANGE = defs.PF_ADDR_RANGE
 
 
+class RuleAddressFlags(enum.IntEnum):
+    NETWORK = defs.PFI_AFLAG_NETWORK
+    BROADCAST = defs.PFI_AFLAG_BROADCAST
+    PEER = defs.PFI_AFLAG_PEER
+    MODEMASK = defs.PFI_AFLAG_MODEMASK
+    NOALIAS = defs.PFI_AFLAG_NOALIAS
+
+
 class RuleDirection(enum.IntEnum):
     INOUT = defs.PF_INOUT
     IN = defs.PF_IN
@@ -152,6 +160,13 @@ cdef class Address(object):
 
         def __set__(self, value):
             self.wrap.type = int(value)
+
+    property iflags:
+        def __get__(self):
+            return RuleAddressFlags(self.wrap.iflags)
+
+        def __set__(self, value):
+            self.wrap.iflags = int(value)
 
     property address:
         def __get__(self):
