@@ -85,6 +85,7 @@ class RuleAddressType(enum.IntEnum):
 
 
 class RuleAddressFlags(enum.IntEnum):
+    NONE = 0
     NETWORK = defs.PFI_AFLAG_NETWORK
     BROADCAST = defs.PFI_AFLAG_BROADCAST
     PEER = defs.PFI_AFLAG_PEER
@@ -145,7 +146,8 @@ cdef class Address(object):
         if self.type == RuleAddressType.DYNIFTL:
             return {
                 'type': self.type.name,
-                'ifname': self.ifname
+                'ifname': self.ifname,
+                'iflags': self.iflags.name
             }
 
         if self.type == RuleAddressType.TABLE:
